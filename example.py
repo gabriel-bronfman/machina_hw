@@ -1,4 +1,4 @@
-## A simple example on how to call sensor.py
+## A simple example of how to call sensor.py
 
 # socket_echo_client.py
 import socket

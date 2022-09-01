@@ -106,7 +106,7 @@ def main(args=None):
     t1.daemon = True
 
     ## you can also launch a second sensor
-    # sensor2 = Sensor('127.0.0.1', 10000, 2000, 0.003) # Define a sensor with 4000Hz sampling rate and 3ms delay
+    # sensor2 = Sensor('127.0.0.1', 10000, 4000, 0.003) # Define a sensor with 4000Hz sampling rate and 3ms delay
     # t2 = Thread(target = sensor2.run)    
     # t2.daemon = True
 

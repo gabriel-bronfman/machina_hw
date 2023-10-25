@@ -4,9 +4,9 @@ The design of our cells in Machina Labs has evolved over the past years. Current
  
 ## Objective
 The goal of This project is to build a ROS2 network that collects data from 3-DOF sensors and makes the filtered data available as a ROS service and topic. Since we cannot send a real sensor to all of our applicants, we made a simple simulator (sensor.py) that mimics the behavior of a real sensor but with random data. 
-- The first task is to make a costume service for 3-DOF sensor 
+- The first task is to make a custom service for 3-DOF sensor 
 - The second task is to make a ROS2 service server that continuously reads data from the sensor and has the latest filter data available for the client service that you make. 
-- Finally, please make a simple client that calls two of these services and publishes them a topic with 500Hz. Please keep in mind that your service servers can run slower than 500Hz. 
+- Finally, please make a simple client that calls two of these services and publishes them to a topic at 500Hz. Please keep in mind that your service servers can run slower than 500Hz. 
 - You can define a second server in the simulator to modify the code and run two at the same time.
 - You can check the example.py to see how to make calls to the sensor
 
@@ -29,3 +29,9 @@ To submit the assignment, do the following:
 5. Develop your homework solution in the cloned repository and push it to GitHub when you're done. Extra points for good Git hygiene.
 
 6. Send us the link to your repository.
+
+## ROS2
+Install instructions (Ubuntu): [https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html)
+
+ROS2 tutorials: [https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries.html](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries.html)
+

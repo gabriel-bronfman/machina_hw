@@ -83,6 +83,7 @@ class Sensor(Thread):
 
     def run(self):
             if self.connect():
+                
                 try:
                     while True:
                         # Recive the request for the number of samples
@@ -93,9 +94,11 @@ class Sensor(Thread):
                         
                         # Send the samples to the client
                         self.send(np.random.rand(self.DOF, int(sample_length)))
+                except:
+                    print(f"Connection at {self.server_address} failed")
 
                 finally:
-                    # Clean up the connection
+                    # Clean up the connection and deactivate sensor
                     self.connection.close()
                     
 
@@ -115,7 +118,7 @@ def main(args=None):
     t1.start()
     # t2.start()
     
-    while True:
+    while t1.is_alive():
         pass
     
 if __name__ == "__main__":

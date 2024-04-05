@@ -7,7 +7,7 @@ import numpy as np
 import time
 
 # requesting 10 samples on each call
-number_of_samples = 10
+number_of_samples = 1
 
 
 # Create a TCP/IP socket
@@ -26,6 +26,7 @@ while True:
 
     byte_data = sock.recv(10000)
     data =  np.frombuffer(byte_data)
+    print(str(data))
 # Clean up the connection
 print('closing socket')
 sock.close()

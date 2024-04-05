@@ -1,0 +1,9 @@
+/home/parallels/robotic_hw/machina_ws/build/robot_interfaces/CMakeFiles/uninstall.dir
+/home/parallels/robotic_hw/machina_ws/build/robot_interfaces/CMakeFiles/robot_interfaces_uninstall.dir
+/home/parallels/robotic_hw/machina_ws/build/robot_interfaces/CMakeFiles/test.dir
+/home/parallels/robotic_hw/machina_ws/build/robot_interfaces/CMakeFiles/edit_cache.dir
+/home/parallels/robotic_hw/machina_ws/build/robot_interfaces/CMakeFiles/rebuild_cache.dir
+/home/parallels/robotic_hw/machina_ws/build/robot_interfaces/CMakeFiles/list_install_components.dir
+/home/parallels/robotic_hw/machina_ws/build/robot_interfaces/CMakeFiles/install.dir
+/home/parallels/robotic_hw/machina_ws/build/robot_interfaces/CMakeFiles/install/local.dir
+/home/parallels/robotic_hw/machina_ws/build/robot_interfaces/CMakeFiles/install/strip.dir

@@ -1,0 +1,9 @@
+/home/parallels/robotic_hw/machina_ws/build/sensor_srv/CMakeFiles/uninstall.dir
+/home/parallels/robotic_hw/machina_ws/build/sensor_srv/CMakeFiles/sensor_srv_uninstall.dir
+/home/parallels/robotic_hw/machina_ws/build/sensor_srv/CMakeFiles/test.dir
+/home/parallels/robotic_hw/machina_ws/build/sensor_srv/CMakeFiles/edit_cache.dir
+/home/parallels/robotic_hw/machina_ws/build/sensor_srv/CMakeFiles/rebuild_cache.dir
+/home/parallels/robotic_hw/machina_ws/build/sensor_srv/CMakeFiles/list_install_components.dir
+/home/parallels/robotic_hw/machina_ws/build/sensor_srv/CMakeFiles/install.dir
+/home/parallels/robotic_hw/machina_ws/build/sensor_srv/CMakeFiles/install/local.dir
+/home/parallels/robotic_hw/machina_ws/build/sensor_srv/CMakeFiles/install/strip.dir

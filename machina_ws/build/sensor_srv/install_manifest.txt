@@ -1,0 +1,15 @@
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/ament_index/resource_index/package_run_dependencies/sensor_srv
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/ament_index/resource_index/parent_prefix_path/sensor_srv
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/sensor_srv/environment/ament_prefix_path.sh
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/sensor_srv/environment/ament_prefix_path.dsv
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/sensor_srv/environment/path.sh
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/sensor_srv/environment/path.dsv
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/sensor_srv/local_setup.bash
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/sensor_srv/local_setup.sh
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/sensor_srv/local_setup.zsh
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/sensor_srv/local_setup.dsv
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/sensor_srv/package.dsv
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/ament_index/resource_index/packages/sensor_srv
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/sensor_srv/cmake/sensor_srvConfig.cmake
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/sensor_srv/cmake/sensor_srvConfig-version.cmake
+/home/parallels/robotic_hw/machina_ws/install/sensor_srv/share/sensor_srv/package.xml

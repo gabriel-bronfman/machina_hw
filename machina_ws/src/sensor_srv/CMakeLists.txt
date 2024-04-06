@@ -8,7 +8,26 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 find_package(robot_interfaces REQUIRED)
+
+include_directories(include)
+
+add_executable(sensor_server_node
+  src/sensor_server_node.cpp)
+
+ament_target_dependencies(sensor_server_node 
+  robot_interfaces
+  rclcpp
+  rclcpp_lifecycle
+  )
+
+install(TARGETS
+  sensor_server_node
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -104,7 +104,7 @@ class Sensor(Thread):
 
 def main(args=None):
     
-    sensor1 = Sensor('127.0.0.3', 10000, 2000, 0.001) # Define a sensor with 2000Hz sampling rate and 1ms delay
+    sensor1 = Sensor('127.0.0.1', 10000, 2000, 0.001) # Define a sensor with 2000Hz sampling rate and 1ms delay
     t1 = Thread(target = sensor1.run)
     t1.daemon = True
 

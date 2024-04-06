@@ -25,13 +25,13 @@ public:
   sensor_lifecyle_node()
   : LifecycleNode("sensor_server_node"), sock_fd(-1), sensor_vals(nullptr)
   {
-        this->declare_parameter<std::string>("address", "127.0.0.3");
-        this->get_parameter("Address", this->address);
+        this->declare_parameter<std::string>("address", "127.0.0.1");
+        this->get_parameter("address", this->address);
 
         this->declare_parameter<int>("port", 10000);
-        this->get_parameter("Port", this->port);
+        this->get_parameter("port", this->port);
 
-        this->declare_parameter<std::string>("sample_num", "10");
+        this->declare_parameter<std::string>("sample_num", "1");
         this->get_parameter("sample_num", this->numOfSamples);
 
         
@@ -47,11 +47,11 @@ public:
 
   rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_configure(const rclcpp_lifecycle::State&)
   {
-    RCLCPP_INFO(get_logger(), "Configuring:");
+    RCLCPP_INFO(get_logger(), "Configuring sensor to address %s and port %d", this->address.c_str(), this->port);
     
     if (connect_to_sensor(this->address.c_str(), this->port)) { 
       RCLCPP_INFO(get_logger(), "Successfully connected to the sensor.");
-      this->sensor_vals = std::make_unique<float[]>(6);
+      this->sensor_vals = std::make_unique<double[]>(6);
       return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
     } else {
       RCLCPP_ERROR(get_logger(), "Failed to connect to the sensor.");
@@ -102,13 +102,14 @@ private:
   std::string numOfSamples;
 
   std::atomic<bool> stopSignal{false};
-  std::unique_ptr<float[]> sensor_vals;
+  std::unique_ptr<double[]> sensor_vals;
   std::unique_ptr<std::thread> sensor_thread;
   rclcpp::Service<robot_interfaces::srv::Sensor>::SharedPtr service_;
 
   bool connect_to_sensor(const char* address, int port) 
   {
     struct sockaddr_in serv_addr;
+    memset(&serv_addr, 0, sizeof(serv_addr));
     sock_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (sock_fd < 0) {
       RCLCPP_ERROR(get_logger(), "Socket creation error");
@@ -143,21 +144,20 @@ private:
         int bytesReceived = read(sock_fd, buffer, 1024);
 
         if (bytesReceived > 0) {
+          int numFloats = bytesReceived / sizeof(double);
+          std::vector<double> tempData(numFloats);
 
-          buffer[bytesReceived] = '\0';
-          std::string receivedData(buffer, bytesReceived);
+          // Copy received bytes into float vector
+          //std::memcpy(sensor_vals.get(), buffer, bytesReceived);
+          std::memcpy(tempData.data(),buffer, bytesReceived);
 
-          receivedData.erase(0, 1); 
-          receivedData.pop_back(); 
-
-          std::stringstream ss(receivedData);
-          std::vector<int> tempData;
-          std::string item;
-          int count = 0;
-
-          while(std::getline(ss, item, ',')){
-            this->sensor_vals[count] = std::stof(item);
+          // Example of logging received float values (using ROS 2 logging)
+          std::stringstream ss;
+          for(int i = 0; i < numFloats; ++i) {
+            ss << tempData[i];
+            this->sensor_vals[i] = tempData[i];
           }
+          RCLCPP_INFO(this->get_logger(), "Received float value: %s", ss.str().c_str());
         }
       }
     };

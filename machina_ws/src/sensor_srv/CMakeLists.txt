@@ -10,20 +10,33 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(robot_interfaces REQUIRED)
+find_package(std_msgs REQUIRED)
 
 include_directories(include)
 
 add_executable(sensor_server_node
   src/sensor_server_node.cpp)
 
-ament_target_dependencies(sensor_server_node 
+
+ament_target_dependencies(sensor_server_node
   robot_interfaces
   rclcpp
   rclcpp_lifecycle
   )
+add_executable(sensor_info_publisher
+  src/sensor_info_publisher.cpp)
+
+ament_target_dependencies(sensor_info_publisher
+  robot_interfaces
+  std_msgs
+  rclcpp
+  rclcpp_lifecycle
+  )
+
 
 install(TARGETS
   sensor_server_node
+  sensor_info_publisher
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}

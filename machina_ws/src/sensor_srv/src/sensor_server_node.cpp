@@ -23,7 +23,7 @@ class sensor_lifecyle_node : public LifecycleNode
 {
 public:
   sensor_lifecyle_node()
-  : LifecycleNode("sensor_server_node"), sock_fd(-1), sensor_vals(nullptr)
+  : LifecycleNode("sensor_server_node"), sock_fd(-1), sensor_vals(nullptr), sensor_thread(nullptr)
   {
         this->declare_parameter<std::string>("address", "127.0.0.1");
         this->get_parameter("address", this->address);
@@ -31,7 +31,7 @@ public:
         this->declare_parameter<int>("port", 10000);
         this->get_parameter("port", this->port);
 
-        this->declare_parameter<std::string>("sample_num", "1");
+        this->declare_parameter<std::string>("sample_num", "10");
         this->get_parameter("sample_num", this->numOfSamples);
 
         
@@ -59,6 +59,27 @@ public:
     }
   }
 
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State&)
+  {
+      RCLCPP_INFO(get_logger(), "Deactivating...");
+
+      
+      if(service_ != nullptr) {
+          
+          service_.reset();
+          RCLCPP_INFO(get_logger(), "Service deleted successfully.");
+      } else {
+          RCLCPP_WARN(get_logger(), "Service was already null.");
+      }
+      return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+  }
+
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_shutdown(const rclcpp_lifecycle::State&)
+  {
+    RCLCPP_INFO(get_logger(), "Shutting Down...");
+    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+  }
+
   CallbackReturn on_activate(const rclcpp_lifecycle::State&)
   {
     RCLCPP_INFO(get_logger(), "Activating...");
@@ -74,7 +95,10 @@ public:
     );
     try 
     {
-      this->sensor_thread = create_receiving_thread();
+      if (this->sensor_thread == nullptr)
+      {
+        this->sensor_thread = create_receiving_thread();
+      }
     } 
     catch (const std::runtime_error& e) {
       RCLCPP_ERROR(get_logger(), "Failed to create thread: %s", e.what());
@@ -146,18 +170,7 @@ private:
         if (bytesReceived > 0) {
           int numFloats = bytesReceived / sizeof(double);
           std::vector<double> tempData(numFloats);
-
-          // Copy received bytes into float vector
-          //std::memcpy(sensor_vals.get(), buffer, bytesReceived);
-          std::memcpy(tempData.data(),buffer, bytesReceived);
-
-          // Example of logging received float values (using ROS 2 logging)
-          std::stringstream ss;
-          for(int i = 0; i < numFloats; ++i) {
-            ss << tempData[i];
-            this->sensor_vals[i] = tempData[i];
-          }
-          RCLCPP_INFO(this->get_logger(), "Received float value: %s", ss.str().c_str());
+          std::memcpy(this->sensor_vals.get(), buffer, bytesReceived);
         }
       }
     };

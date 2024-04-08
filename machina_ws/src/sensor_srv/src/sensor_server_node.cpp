@@ -15,220 +15,194 @@
 #include <memory>
 #include <thread>
 #include <functional>
+#include <vector>
 
 using namespace std::chrono_literals;
 using LifecycleNode = rclcpp_lifecycle::LifecycleNode;
 
-class sensor_lifecyle_node : public LifecycleNode
-{
+class sensor_lifecyle_node : public LifecycleNode {
 public:
   sensor_lifecyle_node()
-  : LifecycleNode("sensor_server_node"), sock_fd(-1), sensor_thread(nullptr)
-  {
-        this->declare_parameter<std::string>("address", "127.0.0.1");
-        this->get_parameter("address", this->address);
+  : LifecycleNode("sensor_server_node") {
+    this->declare_parameter<int>("num_sensors", 1);
+    this->get_parameter("num_sensors", this->num_sensors);
 
-        this->declare_parameter<int>("port", 10000);
-        this->get_parameter("port", this->port);
+    this->declare_parameter<std::vector<std::string>>("sensor_addresses", std::vector<std::string>{"127.0.0.1"});
+    this->get_parameter("sensor_addresses", this->sensor_addresses);
 
-        this->declare_parameter<std::string>("sample_num", "5");
-        this->get_parameter("sample_num", this->numOfSamples);
+    this->declare_parameter<int>("port", 10000);
+    this->get_parameter("port", this->port);
 
-        this->sensor_vals.resize(5 * 6);
+    this->declare_parameter<std::string>("sample_num", "5");
+    this->get_parameter("sample_num", this->numOfSamples);
+
+    // Resize to accommodate values for all sensors
+    this->sensor_vals.resize(num_sensors, std::vector<double>(5 * 6));
+    this->sock_fds.resize(num_sensors, -1); 
+
+    this->sensor_threads.resize(num_sensors);
   }
 
-  ~sensor_lifecyle_node() 
-  {
-    
-    if (sock_fd != -1) {
-      close(sock_fd);
-    }
-  }
-
-  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_configure(const rclcpp_lifecycle::State&)
-  {
-    RCLCPP_INFO(get_logger(), "Configuring sensor to address %s and port %d", this->address.c_str(), this->port);
-    
-    if (connect_to_sensor(this->address.c_str(), this->port)) { 
-      RCLCPP_INFO(get_logger(), "Successfully connected to the sensor.");
-      
-      return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
-    } else {
-      RCLCPP_ERROR(get_logger(), "Failed to connect to the sensor.");
-      return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::FAILURE;
-    }
-  }
-
-  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State&)
-  {
-      RCLCPP_INFO(get_logger(), "Deactivating...");
-
-      
-      if(service_ != nullptr) {
-          
-          service_.reset();
-          RCLCPP_INFO(get_logger(), "Service deleted successfully.");
-      } else {
-          RCLCPP_WARN(get_logger(), "Service was already null.");
+  ~sensor_lifecyle_node() {
+    for (auto& socket : sock_fds) {
+      if (socket != -1) {
+        close(socket);
       }
-      return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+    }
   }
 
-  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_shutdown(const rclcpp_lifecycle::State&)
-  {
-    RCLCPP_INFO(get_logger(), "Shutting Down...");
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_configure(const rclcpp_lifecycle::State&) override {
+    for (int i = 0; i < num_sensors; ++i) {
+      RCLCPP_INFO(get_logger(), "Configuring sensor %d to address %s and port %d", i, this->sensor_addresses[i].c_str(), this->port);
+      
+      if (connect_to_sensor(i, this->sensor_addresses[i].c_str(), this->port)) { 
+        RCLCPP_INFO(get_logger(), "Successfully connected to sensor %d.", i);
+      } else {
+        RCLCPP_ERROR(get_logger(), "Failed to connect to sensor %d.", i);
+        return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::FAILURE;
+      }
+    }
     return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
   }
 
-  CallbackReturn on_activate(const rclcpp_lifecycle::State&)
-  {
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_activate(const rclcpp_lifecycle::State&) override {
     RCLCPP_INFO(get_logger(), "Activating...");
 
-    service_ = this->create_service<robot_interfaces::srv::Sensor>(
-    "sensor_info", 
-    std::bind(
-        &sensor_lifecyle_node::node_service_function, 
-        this, 
-        std::placeholders::_1, 
-        std::placeholders::_2
-      )
-    );
-    try 
-    {
-      if (this->sensor_thread == nullptr)
-      {
-        this->sensor_thread = create_receiving_thread();
-      }
-    } 
-    catch (const std::runtime_error& e) {
-      RCLCPP_ERROR(get_logger(), "Failed to create thread: %s", e.what());
-      return CallbackReturn::FAILURE;
+    for (int i = 0; i < num_sensors; ++i) {
+      std::string service_name = "sensor_info_" + std::to_string(i);
+      auto service = this->create_service<robot_interfaces::srv::Sensor>(
+          service_name, 
+          [this, i](const std::shared_ptr<robot_interfaces::srv::Sensor::Request> request,
+                    std::shared_ptr<robot_interfaces::srv::Sensor::Response> response) {
+              this->node_service_function(i, request, response);
+          });
+      services_.push_back(service);
     }
+
+    RCLCPP_INFO(get_logger(), "Finished starting services");
+    for (int i = 0; i < num_sensors; ++i) {
+      try {
+        if (sensor_threads[i] == nullptr) {
+          sensor_threads[i] = create_receiving_thread(i);
+        }
+      } catch (const std::runtime_error& e) {
+        RCLCPP_ERROR(get_logger(), "Failed to create thread for sensor %d: %s", i, e.what());
+        return CallbackReturn::FAILURE;
+      }
+    }
+
     RCLCPP_INFO(get_logger(), "Activation Successful");
     return CallbackReturn::SUCCESS;
   }
 
-  void node_service_function(const std::shared_ptr<robot_interfaces::srv::Sensor::Request> request, std::shared_ptr<robot_interfaces::srv::Sensor::Response> response)
-  {
-    RCLCPP_INFO(get_logger(), "Incoming request");
-
-    
-    std::lock_guard<std::mutex> guard(sensor_vals_mutex);
-
-    response->data.layout.dim.resize(2); 
-
-
-    response->data.layout.dim[0].label = "rows";
-    response->data.layout.dim[0].size = 5;
-    response->data.layout.dim[0].stride = 5 * 6;
-
-    // Dimension for columns
-    response->data.layout.dim[1].label = "cols";
-    response->data.layout.dim[1].size = 6; 
-    response->data.layout.dim[1].stride = 6;
-
-
-    for (size_t i = 0; i < this->sensor_vals.size(); ++i) {
-      response->data.data.push_back(this->sensor_vals[i]);
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State&) override {
+    RCLCPP_INFO(get_logger(), "Deactivating...");
+    for (auto& service : services_) {
+      if(service != nullptr) {
+        service.reset();
+      }
     }
+    RCLCPP_INFO(get_logger(), "Services deactivated successfully.");
+    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
   }
-  
 
+  rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_shutdown(const rclcpp_lifecycle::State&) override {
+    RCLCPP_INFO(get_logger(), "Shutting Down...");
+    stop_all_threads();
+    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
+  }
 
 private:
-
-  int sock_fd;
+  int num_sensors;
+  std::vector<std::string> sensor_addresses;
   int port;
-  std::string address;
   std::string numOfSamples;
-
+  std::vector<int> sock_fds;
   std::atomic<bool> stopSignal{false};
-  std::vector<double> sensor_vals;
-  std::unique_ptr<std::thread> sensor_thread;
-  rclcpp::Service<robot_interfaces::srv::Sensor>::SharedPtr service_;
+  std::vector<std::vector<double>> sensor_vals;
+  std::vector<std::unique_ptr<std::thread>> sensor_threads{num_sensors};
+  std::vector<rclcpp::Service<robot_interfaces::srv::Sensor>::SharedPtr> services_;
   std::mutex sensor_vals_mutex;
 
-  bool connect_to_sensor(const char* address, int port) 
-  {
+  bool connect_to_sensor(int index, const char* address, int port) {
     struct sockaddr_in serv_addr;
     memset(&serv_addr, 0, sizeof(serv_addr));
-    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock_fd < 0) {
-      RCLCPP_ERROR(get_logger(), "Socket creation error");
+    sock_fds[index] = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock_fds[index] < 0) {
+      RCLCPP_ERROR(get_logger(), "Socket creation error for sensor %d", index);
       return false;
     }
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
 
-    if(inet_pton(AF_INET, address, &serv_addr.sin_addr)<=0) {
-      RCLCPP_ERROR(get_logger(), "Invalid address");
+    if(inet_pton(AF_INET, address, &serv_addr.sin_addr) <= 0) {
+      RCLCPP_ERROR(get_logger(), "Invalid address for sensor %d", index);
       return false;
     }
 
-    if (connect(sock_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-      RCLCPP_ERROR(get_logger(), "Connection Failed");
+    if (connect(sock_fds[index], (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+      RCLCPP_ERROR(get_logger(), "Connection Failed for sensor %d", index);
       return false;
     }
     return true;
   }
 
-  std::unique_ptr<std::thread> create_receiving_thread() 
-  {
-    auto task = [this]() {
+  std::unique_ptr<std::thread> create_receiving_thread(int index) {
+    return std::make_unique<std::thread>([this, index]() {
       char buffer[1024] = {0};
-      this->stopSignal.store(false);
-
       while (!this->stopSignal) {
-        write(this->sock_fd, this->numOfSamples.c_str(), this->numOfSamples.size());
+        write(sock_fds[index], this->numOfSamples.c_str(), this->numOfSamples.size());
 
-        int bytesReceived = read(sock_fd, buffer, sizeof(buffer));
+        int bytesReceived = read(sock_fds[index], buffer, sizeof(buffer));
         if (bytesReceived > 0) {
-          int numDoubles = bytesReceived / sizeof(double); 
-
-          
+          int numDoubles = bytesReceived / sizeof(double);
           std::lock_guard<std::mutex> guard(sensor_vals_mutex);
-
-         
-          this->sensor_vals.clear();
-
-          
+          sensor_vals[index].clear();
           for(int i = 0; i < numDoubles; ++i) {
             double value;
             std::memcpy(&value, &buffer[i * sizeof(double)], sizeof(double));
-            this->sensor_vals.push_back(value);
+            sensor_vals[index].push_back(value);
           }
         }
       }
-    };
-    return std::make_unique<std::thread>(task);
+    });
   }
 
-  void stopThread(std::unique_ptr<std::thread> thread)
-  {
-    this->stopSignal.store(true);
-    if (thread && thread->joinable()){
-      thread->join();
+  void stop_all_threads() {
+    stopSignal.store(true);
+    for (auto& thread : sensor_threads) {
+      if (thread && thread->joinable()) {
+        thread->join();
+      }
     }
-    
   }
 
+  void node_service_function(int index, const std::shared_ptr<robot_interfaces::srv::Sensor::Request> request, std::shared_ptr<robot_interfaces::srv::Sensor::Response> response) {
+    RCLCPP_INFO(get_logger(), "Incoming request for sensor %d", index);
+    std::lock_guard<std::mutex> guard(sensor_vals_mutex);
+
+    response->data.layout.dim.resize(2);
+    response->data.layout.dim[0].label = "rows";
+    response->data.layout.dim[0].size = 5;
+    response->data.layout.dim[0].stride = 5 * 6;
+
+    response->data.layout.dim[1].label = "cols";
+    response->data.layout.dim[1].size = 6;
+    response->data.layout.dim[1].stride = 6;
+
+    for (size_t i = 0; i < sensor_vals[index].size(); ++i) {
+      response->data.data.push_back(sensor_vals[index][i]);
+    }
+  }
 };
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
-
   rclcpp::executors::SingleThreadedExecutor exe;
-
-  std::shared_ptr<sensor_lifecyle_node> lc_node = std::make_shared<sensor_lifecyle_node>();
-
+  auto lc_node = std::make_shared<sensor_lifecyle_node>();
   exe.add_node(lc_node->get_node_base_interface());
-
   exe.spin();
-
   rclcpp::shutdown();
-
-  
   return 0;
 }

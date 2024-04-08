@@ -13,7 +13,6 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/Sensor.srv"
-  "msg/SensorMatrix.msg"
   DEPENDENCIES std_msgs
 )
 # uncomment the following section in order to fill in

@@ -23,7 +23,7 @@ class sensor_lifecyle_node : public LifecycleNode
 {
 public:
   sensor_lifecyle_node()
-  : LifecycleNode("sensor_server_node"), sock_fd(-1), sensor_vals(nullptr), sensor_thread(nullptr)
+  : LifecycleNode("sensor_server_node"), sock_fd(-1), sensor_thread(nullptr)
   {
         this->declare_parameter<std::string>("address", "127.0.0.1");
         this->get_parameter("address", this->address);
@@ -31,10 +31,10 @@ public:
         this->declare_parameter<int>("port", 10000);
         this->get_parameter("port", this->port);
 
-        this->declare_parameter<std::string>("sample_num", "10");
+        this->declare_parameter<std::string>("sample_num", "5");
         this->get_parameter("sample_num", this->numOfSamples);
 
-        
+        this->sensor_vals.resize(5 * 6);
   }
 
   ~sensor_lifecyle_node() 
@@ -51,7 +51,7 @@ public:
     
     if (connect_to_sensor(this->address.c_str(), this->port)) { 
       RCLCPP_INFO(get_logger(), "Successfully connected to the sensor.");
-      this->sensor_vals = std::make_unique<double[]>(6);
+      
       return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
     } else {
       RCLCPP_ERROR(get_logger(), "Failed to connect to the sensor.");
@@ -104,16 +104,33 @@ public:
       RCLCPP_ERROR(get_logger(), "Failed to create thread: %s", e.what());
       return CallbackReturn::FAILURE;
     }
+    RCLCPP_INFO(get_logger(), "Activation Successful");
     return CallbackReturn::SUCCESS;
   }
 
-  void node_service_function(const std::shared_ptr<robot_interfaces::srv::Sensor::Request> _, std::shared_ptr<robot_interfaces::srv::Sensor::Response> response)
+  void node_service_function(const std::shared_ptr<robot_interfaces::srv::Sensor::Request> request, std::shared_ptr<robot_interfaces::srv::Sensor::Response> response)
   {
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Incoming request");
-    for(int i = 0; i < size(response->data); i++){
-      response->data[i] = this->sensor_vals[i];
-    }
+    RCLCPP_INFO(get_logger(), "Incoming request");
 
+    
+    std::lock_guard<std::mutex> guard(sensor_vals_mutex);
+
+    response->data.layout.dim.resize(2); 
+
+
+    response->data.layout.dim[0].label = "rows";
+    response->data.layout.dim[0].size = 5;
+    response->data.layout.dim[0].stride = 5 * 6;
+
+    // Dimension for columns
+    response->data.layout.dim[1].label = "cols";
+    response->data.layout.dim[1].size = 6; 
+    response->data.layout.dim[1].stride = 6;
+
+
+    for (size_t i = 0; i < this->sensor_vals.size(); ++i) {
+      response->data.data.push_back(this->sensor_vals[i]);
+    }
   }
   
 
@@ -126,9 +143,10 @@ private:
   std::string numOfSamples;
 
   std::atomic<bool> stopSignal{false};
-  std::unique_ptr<double[]> sensor_vals;
+  std::vector<double> sensor_vals;
   std::unique_ptr<std::thread> sensor_thread;
   rclcpp::Service<robot_interfaces::srv::Sensor>::SharedPtr service_;
+  std::mutex sensor_vals_mutex;
 
   bool connect_to_sensor(const char* address, int port) 
   {
@@ -158,19 +176,28 @@ private:
   std::unique_ptr<std::thread> create_receiving_thread() 
   {
     auto task = [this]() {
-
       char buffer[1024] = {0};
       this->stopSignal.store(false);
-      while (!this->stopSignal) {
 
+      while (!this->stopSignal) {
         write(this->sock_fd, this->numOfSamples.c_str(), this->numOfSamples.size());
 
-        int bytesReceived = read(sock_fd, buffer, 1024);
-
+        int bytesReceived = read(sock_fd, buffer, sizeof(buffer));
         if (bytesReceived > 0) {
-          int numFloats = bytesReceived / sizeof(double);
-          std::vector<double> tempData(numFloats);
-          std::memcpy(this->sensor_vals.get(), buffer, bytesReceived);
+          int numDoubles = bytesReceived / sizeof(double); 
+
+          
+          std::lock_guard<std::mutex> guard(sensor_vals_mutex);
+
+         
+          this->sensor_vals.clear();
+
+          
+          for(int i = 0; i < numDoubles; ++i) {
+            double value;
+            std::memcpy(&value, &buffer[i * sizeof(double)], sizeof(double));
+            this->sensor_vals.push_back(value);
+          }
         }
       }
     };

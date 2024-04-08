@@ -1,2 +1,2 @@
 ---
-float32[6] data
+std_msgs/Float32MultiArray data

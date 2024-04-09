@@ -19,7 +19,7 @@ Importantly, the node can deactivate and maintain its connection with the TCP/IP
 ## Parameters
 The sensor_server_node has a couple of parameters that can be specified via the sensor_params.yaml file. These are:
 * num_sensor: The number of desired load-cells you want to connect to. Threads will be directly allocated to handle each connection to ensure performance. Spawning too many threads could be very costly.
-* sensor_addresses: a list of index matched sensor addresses that specify the IP of each sensor defined by num_sensors. Node WILL NOT configure if any of the addresses are incorrect or if node failts to connect to any sensors. This ensures that we are never in a situation where the application thinks that everything is configured properly, but some sensors are not operating nominally
+* sensor_addresses: a list of index matched sensor addresses that specify the IP of each sensor defined by num_sensors. Node WILL NOT configure if any of the addresses are incorrect or if node fails to connect to any sensors. This ensures that we are never in a situation where the application thinks that everything is configured properly, but some sensors are not operating nominally
 * port: This number will be the port for all sensors when their respective sockets are initialized. Can be updated at a later date to accomodate multiple ports
 
 ## Demo
@@ -48,7 +48,7 @@ ros2 run sensor_srv sensor_info_publisher --ros-args -r sensor_info_service:=sen
 ros2 run sensor_srv sensor_info_publisher --ros-args -r sensor_info_service:=sensor_info_1 -p sensor_number:=1
 ```
 
-Now you can confifure and activate the lifecycle node using:
+Now you can configure and activate the lifecycle node using:
 
 ```
 ros2 lifecycle set /sensor_server_node configure

@@ -35,7 +35,7 @@ ros2 run sensor_srv sensor_server_node --ros-args --params-file machina_ws/src/s
 To start the sensor.py, you can exectute:
 
 ```
-python(3) sensor.py
+python3 sensor.py
 
 ```
 

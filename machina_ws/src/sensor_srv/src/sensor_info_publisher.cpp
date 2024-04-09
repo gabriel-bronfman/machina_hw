@@ -10,10 +10,15 @@ public:
   SensorInfoPublisher()
   : Node("sensor_info_publisher"), sensor_data_(std::make_shared<std_msgs::msg::Float32MultiArray>())
   {
-    publisher_ = this->create_publisher<std_msgs::msg::Float32MultiArray>("sensor_info_topic", 10);
+    
     
     client_ = this->create_client<robot_interfaces::srv::Sensor>("/sensor_info_service");
     
+    int sensor_number;
+    this->declare_parameter<int>("sensor_number", 0);
+    this->get_parameter("sensor_number", sensor_number);
+
+    publisher_ = this->create_publisher<std_msgs::msg::Float32MultiArray>("sensor_info_topic_" + std::to_string(sensor_number), 10);
 
     queue_of_readings = std::make_unique<std::queue<std::array<float, 6>>>();
 

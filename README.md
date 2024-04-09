@@ -12,29 +12,47 @@ Ensure that your sensor is connected to the computer via ethernet or is on the s
 ## Runtime
 The service server is a lifecycle node, meaning that its state can be configured programatically, or directly via the ROS2 CLI. Below is an image of the relevant states, and what important characteristics are present at each state:
 
+![Screenshot of state diagram](/ros2_lifecycle_node.png)
 
-## Grading Criteria
-- We’re looking for code that is clean, readable, performant, and maintainable.
-- The developer must think through the process of deploying and using the solution and provide the necessary documentation. 
-- The sensor samples with 2000Hz, and you can request a specific number of samples in each call. Each call also has a ~1ms delay on top of the sampling time. We would like to hear your thought on picking the number of samples that you read in each call. 
+Importantly, the node can deactivate and maintain its connection with the TCP/IP connected device, but will not expose service functionality to the rest of the ROS2 graph. Additionally, you must manually activate the node to expose service request functionality.
 
-## Submission
-To submit the assignment, do the following:
+## Parameters
+The sensor_server_node has a couple of parameters that can be specified via the sensor_params.yaml file. These are:
+* num_sensor: The number of desired load-cells you want to connect to. Threads will be directly allocated to handle each connection to ensure performance. Spawning too many threads could be very costly.
+* sensor_addresses: a list of index matched sensor addresses that specify the IP of each sensor defined by num_sensors. Node WILL NOT configure if any of the addresses are incorrect or any of the sensors fail. This ensures that we are never in a situation where the application thinks that everything is configured properly, but some sensors are not operating nominally
+* port: This number will be the port for all sensors when their respective sockets are initialized. Can be updated at a later date to accomodate multiple ports
 
-1. Navigate to GitHub's project import page: [https://github.com/new/import](https://github.com/new/import)
+## Demo
 
-2. In the box titled "Your old repository's clone URL", paste the homework repository's link: [https://github.com/Machina-Labs/robotic_hw](https://github.com/Machina-Labs/robotic_hw)
+To demo this repository, ensure you have built the workspace, and sourced the workspace (in each terminal). From the root of the repo you can run the following commands in seperate terminals:
 
-3. In the box titled "Repository Name", add a name for your local homework (ex. `Robotic_soln`)
+To start the sensor_server_node with parameters that work for my sensor.py, you can run:
 
-4. Set the privacy level to "Public", then click "Begin Import" button at bottom of the page.
+```
+ros2 run sensor_srv sensor_server_node --ros-args --params-file src/sensor_srv/config/sensor_params.yaml 
+```
 
-5. Develop your homework solution in the cloned repository and push it to GitHub when you're done. Extra points for good Git hygiene.
+To start the sensor.py, you can exectute:
 
-6. Send us the link to your repository.
+```
+python(3) sensor.py
 
-## ROS2
-Install instructions (Ubuntu): [https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html)
+```
 
-ROS2 tutorials: [https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries.html](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries.html)
+The simple client for publication has to be run twice, where each one has a specified parameter "sensor_num" so that they publish to seperate topics. These are the commands:
 
+```
+ros2 run sensor_srv sensor_info_publisher --ros-args -r sensor_info_service:=sensor_info_0 -p sensor_number:=0
+```
+```
+ros2 run sensor_srv sensor_info_publisher --ros-args -r sensor_info_service:=sensor_info_0 -p sensor_number:=1
+```
+
+Now you can confifure and activate the lifecycle node using:
+
+```
+ros2 lifecycle set /sensor_server_node configure
+ros2 lifecycle set /sensor_server_node activate
+```
+
+You should be able to ```ros2 topic list``` and see two topics, one for each sensor, that publishes received data in real-time.

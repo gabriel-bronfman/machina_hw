@@ -36,7 +36,6 @@ To start the sensor.py, you can exectute:
 
 ```
 python3 sensor.py
-
 ```
 
 The simple client for publication has to be run twice, where each one has a specified parameter "sensor_num" so that they publish to seperate topics. These are the commands:

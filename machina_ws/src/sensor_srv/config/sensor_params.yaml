@@ -3,4 +3,3 @@ sensor_server_node:
     num_sensors: 2
     sensor_addresses: ["127.0.0.1", "127.0.0.2"]
     port: 10000
-    sample_num: "5"

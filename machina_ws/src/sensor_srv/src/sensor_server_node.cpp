@@ -23,7 +23,7 @@ using LifecycleNode = rclcpp_lifecycle::LifecycleNode;
 class sensor_lifecyle_node : public LifecycleNode {
 public:
   sensor_lifecyle_node()
-  : LifecycleNode("sensor_server_node") {
+  : LifecycleNode("sensor_server_node"), numOfSamples("5") {
     this->declare_parameter<int>("num_sensors", 1);
     this->get_parameter("num_sensors", this->num_sensors);
 
@@ -33,8 +33,9 @@ public:
     this->declare_parameter<int>("port", 10000);
     this->get_parameter("port", this->port);
 
-    this->declare_parameter<std::string>("sample_num", "5");
-    this->get_parameter("sample_num", this->numOfSamples);
+    // this->declare_parameter<std::string>("sample_num", "5");
+    // this->get_parameter("sample_num", this->numOfSamples);
+    // this->numOfSamples = 
 
     // Resize to accommodate values for all sensors
     this->sensor_vals.resize(num_sensors, std::vector<double>(5 * 6));

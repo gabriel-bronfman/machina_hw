@@ -1,14 +1,17 @@
-# Robotic_HW
-## Context
-The design of our cells in Machina Labs has evolved over the past years. Currently, each of our cells has two articulated industrial robots on rails (a total of 7 axes) and a frame with hydraulic clamps. For the parts to form correctly, we must exert and maintain a dynamic force during the forming in a very accurate location in space. Currently, each robot is equipped with a load cell. See a quick video about our process [here](https://www.youtube.com/watch?v=iqYMprTEXRI). We are using ROS2 to collect the data from the network and control the robots in real-time. As a robotic engineer, we keep developing different modules for our network to add features to the system.  
+# Robotic_HW - Gabriel Bronfman
+## Overview
+This workspace contains two packages, sensor_srv and robot_interfaces, that work together to provide a service that exposes close to real-time sensor data from a generic TCP/IP connected load cell(s). The load cell in this case has 6 DOF. At runtime, the service server node generically accepts a specified number of sensors, and connects to them according to a defined list of addresses. At this time each one operates on the same port number, though with relatively simple modification that can be specified at runtime in a future version as well.
+
+Each sensor is given its own thread to handle concurrency issues to make data available to service requesters with as little overhead as possible. Given that a load cell at the end of the robot is a control sensitive piece of information, special attention was given to providing as close to real-time data as possible. The overhead from service request to data serve is the sum of all processing and measuring. It takes $1ms$ of network latency per request, plus $\frac{n}{2000}$ measuring time to get $n$ samples. My system has an overhead from service request to response of between $.2ms$ to $.4ms$. The specifications require publication of requested information at $500hz$. I chose $5$ samples per request to create a continuous flow of data at 100 service requests per second. I thought that struck a good balance between, in the worst case, $4ms$ of latency while providing a continuous stream of data with no interruptions.
  
-## Objective
-The goal of This project is to build a ROS2 network that collects data from 3-DOF sensors and makes the filtered data available as a ROS service and topic. Since we cannot send a real sensor to all of our applicants, we made a simple simulator (sensor.py) that mimics the behavior of a real sensor but with random data. 
-- The first task is to make a custom service for 3-DOF sensor 
-- The second task is to make a ROS2 service server that continuously reads data from the sensor and has the latest filter data available for the client service that you make. 
-- Finally, please make a simple client that calls two of these services and publishes them to a topic at 500Hz. Please keep in mind that your service servers can run slower than 500Hz. 
-- You can define a second server in the simulator to modify the code and run two at the same time.
-- You can check the example.py to see how to make calls to the sensor
+## Deploying
+Any computer with a connected internet connection can simply clone the repository, extract desired packages, and place them in the computers ```src``` in a predefined ```colcon_ws```. Simply run ```colcon build``` in the root of the workspace and source your workspace.
+
+Ensure that your sensor is connected to the computer via ethernet or is on the same network, with a defined IP that you can ping. If required, enable communication to occurr to the IP if your firewall prohibits unknown connections. 
+
+## Runtime
+The service server is a lifecycle node, meaning that its state can be configured programatically, or directly via the ROS2 CLI. Below is an image of the relevant states, and what important characteristics are present at each state:
+
 
 ## Grading Criteria
 - We’re looking for code that is clean, readable, performant, and maintainable.
